@@ -18,7 +18,7 @@ func NewServer(db *pgxpool.Pool) *Server {
 func (s *Server) Start(port string) error {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("api/health", s.handleHealth)
+	mux.HandleFunc("/api/health", s.handleHealth)
 
 	return http.ListenAndServe(":"+port, mux)
 }
