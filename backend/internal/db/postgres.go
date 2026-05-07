@@ -9,7 +9,7 @@ import (
 	"github.com/milad176/go-realtime-chat/backend/internal/config"
 )
 
-func PostgresConnectDB(cfg *config.Config) (*pgxpool.Pool, error) {
+func NewPostgresDB(cfg *config.Config) (*pgxpool.Pool, error) {
 	connString := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s",
 		cfg.DBUser,
 		cfg.DBPassword,

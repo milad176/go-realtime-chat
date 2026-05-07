@@ -13,11 +13,12 @@ func main() {
 
 	cfg := config.LoadConfig()
 
-	pg, err := db.PostgresConnectDB(cfg)
+	pg, err := db.NewPostgresDB(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	db.RunMigrations(pg)
 	server := api.NewServer(pg)
 
 	log.Printf("HTTP server listening on :%s\n", cfg.ServerPort)
