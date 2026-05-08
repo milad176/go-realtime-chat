@@ -19,6 +19,7 @@ func main() {
 	}
 
 	db.RunMigrations(pg)
+
 	server := api.NewServer(pg)
 
 	log.Printf("HTTP server listening on :%s\n", cfg.ServerPort)
