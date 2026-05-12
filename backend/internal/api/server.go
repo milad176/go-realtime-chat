@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/milad176/go-realtime-chat/backend/internal/handler"
 	"github.com/milad176/go-realtime-chat/backend/internal/repository"
+	"github.com/milad176/go-realtime-chat/backend/internal/ws"
 )
 
 type Server struct {
@@ -35,6 +36,7 @@ func (s *Server) Start(port string) error {
 	mux.HandleFunc("POST /api/users", userHandler.CreateUser)
 	mux.HandleFunc("POST /api/rooms", roomHandler.CreateRoom)
 	mux.HandleFunc("GET /api/rooms", roomHandler.GetRooms)
+	mux.HandleFunc("/ws", ws.HandleWebSocket)
 
 	return http.ListenAndServe(":"+port, mux)
 }
