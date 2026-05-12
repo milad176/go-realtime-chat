@@ -36,7 +36,7 @@ func (s *Server) Start(port string) error {
 	mux.HandleFunc("POST /api/users", userHandler.CreateUser)
 	mux.HandleFunc("POST /api/rooms", roomHandler.CreateRoom)
 	mux.HandleFunc("GET /api/rooms", roomHandler.GetRooms)
-	mux.HandleFunc("/ws", ws.HandleWebSocket)
+	mux.HandleFunc("/api/ws", ws.HandleWebSocket)
 
 	return http.ListenAndServe(":"+port, mux)
 }
