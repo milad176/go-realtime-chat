@@ -6,6 +6,7 @@ import (
 	"github.com/milad176/go-realtime-chat/backend/internal/api"
 	"github.com/milad176/go-realtime-chat/backend/internal/config"
 	"github.com/milad176/go-realtime-chat/backend/internal/db"
+	"github.com/milad176/go-realtime-chat/backend/internal/ws"
 )
 
 func main() {
@@ -20,11 +21,15 @@ func main() {
 
 	db.RunMigrations(pg)
 
-	server := api.NewServer(pg)
+	hub := ws.NewHub()
+	go hub.Run()
+
+	server := api.NewServer(pg, hub)
 
 	log.Printf("HTTP server listening on :%s\n", cfg.ServerPort)
 
 	if err := server.Start(cfg.ServerPort); err != nil {
 		log.Fatal(err)
 	}
+
 }

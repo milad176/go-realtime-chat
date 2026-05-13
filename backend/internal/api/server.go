@@ -11,11 +11,15 @@ import (
 )
 
 type Server struct {
-	DB *pgxpool.Pool
+	DB  *pgxpool.Pool
+	Hub *ws.Hub
 }
 
-func NewServer(db *pgxpool.Pool) *Server {
-	return &Server{DB: db}
+func NewServer(db *pgxpool.Pool, hub *ws.Hub) *Server {
+	return &Server{
+		DB:  db,
+		Hub: hub,
+	}
 }
 
 func (s *Server) Start(port string) error {
@@ -36,7 +40,7 @@ func (s *Server) Start(port string) error {
 	mux.HandleFunc("POST /api/users", userHandler.CreateUser)
 	mux.HandleFunc("POST /api/rooms", roomHandler.CreateRoom)
 	mux.HandleFunc("GET /api/rooms", roomHandler.GetRooms)
-	mux.HandleFunc("/api/ws", ws.HandleWebSocket)
+	mux.HandleFunc("/api/ws", ws.HandleWebSocket(s.Hub))
 
 	return http.ListenAndServe(":"+port, mux)
 }

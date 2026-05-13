@@ -13,16 +13,23 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("websocket upgrade error:", err)
-		return
+func HandleWebSocket(hub *Hub) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Println("websocket upgrade error:", err)
+			return
+		}
+
+		log.Println("new websocket connection")
+
+		client := NewClient(conn, hub)
+
+		hub.register <- client
+
+		go client.WriteLoop()
+		go client.ReadLoop()
 	}
-
-	log.Println("new websocket connection")
-
-	client := NewClient(conn)
-
-	go client.ReadLoop()
 }

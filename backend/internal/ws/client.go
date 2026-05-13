@@ -8,14 +8,23 @@ import (
 
 type Client struct {
 	conn *websocket.Conn
+	hub  *Hub
+	send chan []byte
 }
 
-func NewClient(conn *websocket.Conn) *Client {
-	return &Client{conn: conn}
+func NewClient(conn *websocket.Conn, hub *Hub) *Client {
+	return &Client{
+		conn: conn,
+		hub:  hub,
+		send: make(chan []byte),
+	}
 }
 
 func (c *Client) ReadLoop() {
-	defer c.conn.Close()
+	defer func() {
+		c.hub.unregister <- c
+		c.conn.Close()
+	}()
 
 	for {
 		_, message, err := c.conn.ReadMessage()
@@ -25,5 +34,24 @@ func (c *Client) ReadLoop() {
 		}
 
 		log.Printf("message received: %s\n", string(message))
+
+		c.hub.broadcast <- message
+	}
+}
+
+func (c *Client) WriteLoop() {
+	defer c.conn.Close()
+
+	for {
+		message, ok := <-c.send
+
+		if !ok {
+			return
+		}
+
+		err := c.conn.WriteMessage(websocket.TextMessage, message)
+		if err != nil {
+			return
+		}
 	}
 }
