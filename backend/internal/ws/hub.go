@@ -25,11 +25,12 @@ func (h *Hub) Run() {
 
 		case client := <-h.register:
 			h.clients[client] = true
-			log.Println("CONNECTED CLIENTS:", len(h.clients))
+			log.Printf("client connected id=%s total_clients=%d\n", client.id, len(h.clients))
 
 		case client := <-h.unregister:
 			delete(h.clients, client)
 			close(client.send)
+			log.Printf("client disconnected id=%s total_clients=%d\n", client.id, len(h.clients))
 
 		case message := <-h.broadcast:
 
@@ -37,7 +38,7 @@ func (h *Hub) Run() {
 			log.Println("CLIENTS COUNT:", len(h.clients))
 
 			for client := range h.clients {
-				log.Printf("sending to client id=%p", client)
+				log.Printf("sending to client=%s room=%s\n", client.id, client.roomID)
 				client.send <- message
 			}
 		}

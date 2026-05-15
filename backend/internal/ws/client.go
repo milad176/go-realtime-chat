@@ -3,10 +3,14 @@ package ws
 import (
 	"log"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
 type Client struct {
+	id     string
+	roomID string
+
 	conn *websocket.Conn
 	hub  *Hub
 	send chan []byte
@@ -14,6 +18,9 @@ type Client struct {
 
 func NewClient(conn *websocket.Conn, hub *Hub) *Client {
 	return &Client{
+		id:     uuid.New().String(),
+		roomID: "",
+
 		conn: conn,
 		hub:  hub,
 		send: make(chan []byte),
