@@ -9,7 +9,7 @@ function App() {
     socket.onopen = () => {
       console.log("connected");
 
-      socket.send("hello from react frontend");
+      socket.send(JSON.stringify({type: "join_room",roomId: "general"}));
     };
 
     socket.onmessage = (event) => {

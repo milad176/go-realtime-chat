@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"encoding/json"
 	"log"
 
 	"github.com/google/uuid"
@@ -34,15 +35,32 @@ func (c *Client) ReadLoop() {
 	}()
 
 	for {
-		_, message, err := c.conn.ReadMessage()
+		_, payload, err := c.conn.ReadMessage()
 		if err != nil {
 			log.Println("client disconnected:", err)
 			break
 		}
 
-		log.Printf("message received: %s\n", string(message))
+		var message Message
 
-		c.hub.broadcast <- message
+		err = json.Unmarshal(payload, &message)
+
+		if err != nil {
+			log.Println("invalid message:", err)
+			continue
+		}
+
+		log.Printf("message received with type: %s\n", string(message.Type))
+
+		switch message.Type {
+
+		case "join_room":
+			c.roomID = message.RoomID
+			log.Printf("client=%s joined room=%s\n", c.id, c.roomID)
+
+		case "chat_message":
+			c.hub.broadcast <- payload
+		}
 	}
 }
 

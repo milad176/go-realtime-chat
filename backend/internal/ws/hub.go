@@ -1,6 +1,9 @@
 package ws
 
-import "log"
+import (
+	"encoding/json"
+	"log"
+)
 
 type Hub struct {
 	clients    map[*Client]bool
@@ -33,12 +36,20 @@ func (h *Hub) Run() {
 			log.Printf("client disconnected id=%s total_clients=%d\n", client.id, len(h.clients))
 
 		case message := <-h.broadcast:
-
 			log.Println("BROADCAST EVENT:", string(message))
 			log.Println("CLIENTS COUNT:", len(h.clients))
 
+			var msg Message
+
+			err := json.Unmarshal(message, &msg)
+			if err != nil {
+				continue
+			}
+
 			for client := range h.clients {
-				log.Printf("sending to client=%s room=%s\n", client.id, client.roomID)
+				if client.roomID != msg.RoomID {
+					continue
+				}
 				client.send <- message
 			}
 		}
