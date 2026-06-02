@@ -10,6 +10,7 @@ type Hub struct {
 	register   chan *Client
 	unregister chan *Client
 	broadcast  chan []byte
+	rooms      map[string]map[*Client]bool
 }
 
 func NewHub() *Hub {
@@ -18,6 +19,7 @@ func NewHub() *Hub {
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		broadcast:  make(chan []byte),
+		rooms:      make(map[string]map[*Client]bool),
 	}
 }
 
@@ -31,6 +33,9 @@ func (h *Hub) Run() {
 			log.Printf("client connected id=%s total_clients=%d\n", client.id, len(h.clients))
 
 		case client := <-h.unregister:
+			if client.roomID != "" {
+				delete(h.rooms[client.roomID], client)
+			}
 			delete(h.clients, client)
 			close(client.send)
 			log.Printf("client disconnected id=%s total_clients=%d\n", client.id, len(h.clients))
@@ -54,4 +59,23 @@ func (h *Hub) Run() {
 			}
 		}
 	}
+}
+
+func (h *Hub) JoinRoom(client *Client, roomID string) {
+
+	// Remove from old room
+	if client.roomID != "" {
+		delete(h.rooms[client.roomID], client)
+	}
+
+	// Create room if it doesn't exist
+	if h.rooms[roomID] == nil {
+		h.rooms[roomID] = make(map[*Client]bool)
+	}
+
+	// Add client to new room
+	h.rooms[roomID][client] = true
+
+	// Update client state
+	client.roomID = roomID
 }
