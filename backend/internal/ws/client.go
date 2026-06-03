@@ -55,11 +55,15 @@ func (c *Client) ReadLoop() {
 		switch message.Type {
 
 		case "join_room":
-			c.roomID = message.RoomID
-			log.Printf("client=%s joined room=%s\n", c.id, c.roomID)
+			c.hub.JoinRoom(c, message.RoomID)
+
+			log.Printf("client=%s joined room=%s\n", c.id, message.RoomID)
 
 		case "chat_message":
-			c.hub.broadcast <- payload
+			c.hub.broadcast <- BroadcastMessage{
+				RoomID: c.roomID,
+				Data:   payload,
+			}
 		}
 	}
 }
