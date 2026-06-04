@@ -31,15 +31,18 @@ func (s *Server) Start(port string) error {
 	// repositories
 	userRepository := repository.NewUserRepository(s.DB)
 	roomRepository := repository.NewRoomRepository(s.DB)
+	messageRepository := repository.NewMessageRepository(s.DB)
 
 	// handlers
 	userHandler := handler.NewUserHandler(userRepository)
 	roomHandler := handler.NewRoomHandler(roomRepository)
+	messageHandler := handler.NewMessageHandler(messageRepository)
 
 	// routes
 	mux.HandleFunc("POST /api/users", userHandler.CreateUser)
 	mux.HandleFunc("POST /api/rooms", roomHandler.CreateRoom)
 	mux.HandleFunc("GET /api/rooms", roomHandler.GetRooms)
+	mux.HandleFunc("GET /api/messages", messageHandler.GetMessages)
 	mux.HandleFunc("/api/ws", ws.HandleWebSocket(s.Hub))
 
 	return http.ListenAndServe(":"+port, mux)

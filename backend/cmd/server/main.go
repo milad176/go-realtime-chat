@@ -6,6 +6,7 @@ import (
 	"github.com/milad176/go-realtime-chat/backend/internal/api"
 	"github.com/milad176/go-realtime-chat/backend/internal/config"
 	"github.com/milad176/go-realtime-chat/backend/internal/db"
+	"github.com/milad176/go-realtime-chat/backend/internal/repository"
 	"github.com/milad176/go-realtime-chat/backend/internal/ws"
 )
 
@@ -20,8 +21,9 @@ func main() {
 	}
 
 	db.RunMigrations(pg)
+	messageRepo := repository.NewMessageRepository(pg)
 
-	hub := ws.NewHub()
+	hub := ws.NewHub(messageRepo)
 	go hub.Run()
 
 	server := api.NewServer(pg, hub)

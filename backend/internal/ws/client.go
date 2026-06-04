@@ -60,6 +60,18 @@ func (c *Client) ReadLoop() {
 			log.Printf("client=%s joined room=%s\n", c.id, message.RoomID)
 
 		case "chat_message":
+
+			if c.roomID == "" {
+				log.Println("client not in room")
+				continue
+			}
+
+			err := c.hub.messageRepo.Create(c.roomID, message.Username, message.Content)
+			if err != nil {
+				log.Println("failed to save message:", err)
+				continue
+			}
+
 			c.hub.broadcast <- BroadcastMessage{
 				RoomID: c.roomID,
 				Data:   payload,

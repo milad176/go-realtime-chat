@@ -3,6 +3,8 @@ package ws
 import (
 	"encoding/json"
 	"log"
+
+	"github.com/milad176/go-realtime-chat/backend/internal/repository"
 )
 
 type Hub struct {
@@ -12,16 +14,18 @@ type Hub struct {
 	register   chan *Client
 	unregister chan *Client
 
-	broadcast chan BroadcastMessage
+	broadcast   chan BroadcastMessage
+	messageRepo *repository.MessageRepository
 }
 
-func NewHub() *Hub {
+func NewHub(messageRepo *repository.MessageRepository) *Hub {
 	return &Hub{
-		clients:    make(map[*Client]bool),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		broadcast:  make(chan BroadcastMessage),
-		rooms:      make(map[string]map[*Client]bool),
+		clients:     make(map[*Client]bool),
+		register:    make(chan *Client),
+		unregister:  make(chan *Client),
+		broadcast:   make(chan BroadcastMessage),
+		messageRepo: messageRepo,
+		rooms:       make(map[string]map[*Client]bool),
 	}
 }
 
