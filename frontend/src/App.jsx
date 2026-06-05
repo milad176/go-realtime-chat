@@ -11,6 +11,8 @@ function App() {
     socket.onopen = () => {
       console.log("connected");
 
+        window.socket = socket;
+
       socket.send(
         JSON.stringify({
           type: "join_room",
