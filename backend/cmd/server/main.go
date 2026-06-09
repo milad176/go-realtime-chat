@@ -1,7 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/milad176/go-realtime-chat/backend/internal/api"
 	"github.com/milad176/go-realtime-chat/backend/internal/config"
@@ -30,8 +36,38 @@ func main() {
 
 	log.Printf("HTTP server listening on :%s\n", cfg.ServerPort)
 
-	if err := server.Start(cfg.ServerPort); err != nil {
-		log.Fatal(err)
+	httpServer := server.NewHTTPServer(cfg.ServerPort)
+
+	go func() {
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	shutdown := make(chan os.Signal, 1)
+
+	signal.Notify(
+		shutdown,
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+
+	<-shutdown
+
+	log.Println("Shutdown signal received")
+
+	ctx, cancel := context.WithTimeout(
+		context.Background(),
+		5*time.Second,
+	)
+	defer cancel()
+
+	if err := httpServer.Shutdown(ctx); err != nil {
+		log.Printf("HTTP shutdown error: %v", err)
 	}
 
+	log.Println("Closing PostgreSQL connection pool")
+	pg.Close()
+
+	log.Println("Application stopped gracefully")
 }

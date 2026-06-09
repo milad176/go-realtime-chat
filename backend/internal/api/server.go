@@ -22,7 +22,7 @@ func NewServer(db *pgxpool.Pool, hub *ws.Hub) *Server {
 	}
 }
 
-func (s *Server) Start(port string) error {
+func (s *Server) NewHTTPServer(port string) *http.Server {
 	mux := http.NewServeMux()
 
 	// Health check endpoint
@@ -45,7 +45,7 @@ func (s *Server) Start(port string) error {
 	mux.HandleFunc("GET /api/messages", messageHandler.GetMessages)
 	mux.HandleFunc("/api/ws", ws.HandleWebSocket(s.Hub))
 
-	return http.ListenAndServe(":"+port, mux)
+	return &http.Server{Addr: ":" + port, Handler: mux}
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
