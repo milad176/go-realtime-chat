@@ -45,7 +45,11 @@ func (s *Server) NewHTTPServer(port string) *http.Server {
 	mux.HandleFunc("GET /api/messages", messageHandler.GetMessages)
 	mux.HandleFunc("/api/ws", ws.HandleWebSocket(s.Hub))
 
-	return &http.Server{Addr: ":" + port, Handler: mux}
+	return &http.Server{
+		Addr:    ":" + port,
+		Handler: cors(mux),
+	}
+
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
