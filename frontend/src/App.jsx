@@ -2,7 +2,10 @@ import { useState, useRef, useEffect } from "react";
 import EmojiPicker from "emoji-picker-react";
 
 function App() {
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(
+    localStorage.getItem("username") || ""
+  );
+
   const [room, setRoom] = useState("general");
 
   const [connected, setConnected] = useState(false);
@@ -12,6 +15,9 @@ function App() {
   const [messageInput, setMessageInput] = useState("");
 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [typingUser, setTypingUser] = useState("");
 
   const messagesEndRef = useRef(null);
 
@@ -31,20 +37,26 @@ function App() {
       return;
     }
 
+    localStorage.setItem("username", username);
+
     const response = await fetch(
       `http://localhost:8080/api/messages?room=${room}`
     );
 
     const history = await response.json();
+
     setMessages(history);
 
-    const ws = new WebSocket("ws://localhost:8080/api/ws");
+    const ws = new WebSocket(
+      "ws://localhost:8080/api/ws"
+    );
 
     ws.onopen = () => {
       ws.send(
         JSON.stringify({
           type: "join_room",
           roomId: room,
+          username: username,
         })
       );
 
@@ -53,7 +65,27 @@ function App() {
 
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
-      setMessages((prev) => [...prev, message]);
+
+      switch (message.type) {
+        case "online_users":
+          setOnlineUsers(message.users || []);
+          break;
+
+        case "typing":
+          setTypingUser(message.username);
+
+          setTimeout(() => {
+            setTypingUser("");
+          }, 1500);
+          break;
+
+        case "chat_message":
+          setMessages((prev) => [...prev, message]);
+          break;
+
+        default:
+          break;
+      }
     };
 
     ws.onclose = () => {
@@ -63,14 +95,27 @@ function App() {
     setSocket(ws);
   }
 
+  function sendTyping() {
+    if (!socket) return;
+
+    socket.send(
+      JSON.stringify({
+        type: "typing",
+        roomId: room,
+        username: username,
+      })
+    );
+  }
+
   function sendMessage() {
     if (!socket) return;
+
     if (!messageInput.trim()) return;
 
     socket.send(
       JSON.stringify({
         type: "chat_message",
-        username,
+        username: username,
         content: messageInput,
       })
     );
@@ -100,15 +145,20 @@ function App() {
     >
       <div
         style={{
-          width: "800px",
+          width: "900px",
           background: "#1e1e1e",
           borderRadius: "12px",
           padding: "20px",
           boxShadow: "0 0 20px rgba(0,0,0,0.4)",
         }}
       >
-        <h1 style={{ textAlign: "center", marginBottom: "20px" }}>
-          Go Realtime Chat
+        <h1
+          style={{
+            textAlign: "center",
+            marginBottom: "20px",
+          }}
+        >
+          Go Realtime Chat 🚀
         </h1>
 
         {!connected && (
@@ -116,7 +166,9 @@ function App() {
             <input
               placeholder="Username"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) =>
+                setUsername(e.target.value)
+              }
               style={{
                 width: "100%",
                 padding: "12px",
@@ -129,7 +181,9 @@ function App() {
             <input
               placeholder="Room"
               value={room}
-              onChange={(e) => setRoom(e.target.value)}
+              onChange={(e) =>
+                setRoom(e.target.value)
+              }
               style={{
                 width: "100%",
                 padding: "12px",
@@ -164,8 +218,27 @@ function App() {
                 marginBottom: "15px",
               }}
             >
-              <div>👤 {username}</div>
-              <div>💬 {room}</div>
+              <div>
+                👤 {username}
+              </div>
+
+              <div>
+                💬 {room}
+              </div>
+
+              <div>
+                🟢 {onlineUsers.length} online
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginBottom: "10px",
+                color: "#aaa",
+                fontSize: "14px",
+              }}
+            >
+              {onlineUsers.join(", ")}
             </div>
 
             <div
@@ -179,27 +252,95 @@ function App() {
                 background: "#181818",
               }}
             >
-              {messages.map((msg, index) => (
-                <div
-                  key={index}
-                  style={{
-                    marginBottom: "10px",
-                    padding: "10px",
-                    borderRadius: "8px",
-                    background:
-                      msg.username === username ? "#2d5fff" : "#2b2b2b",
-                  }}
-                >
-                  <strong>{msg.username}</strong>
-                  <div>{msg.content}</div>
-                </div>
-              ))}
+              {messages.map((msg, index) => {
+                const isMine =
+                  msg.username === username;
+
+                const previous =
+                  messages[index - 1];
+
+                const grouped =
+                  previous &&
+                  previous.username ===
+                    msg.username;
+
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      display: "flex",
+                      justifyContent: isMine
+                        ? "flex-end"
+                        : "flex-start",
+                      marginBottom: grouped
+                        ? "4px"
+                        : "12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        maxWidth: "70%",
+                        background: isMine
+                          ? "#2d5fff"
+                          : "#2b2b2b",
+                        padding: "10px",
+                        borderRadius: "12px",
+                      }}
+                    >
+                      {!grouped && (
+                        <div
+                          style={{
+                            fontWeight: "bold",
+                            marginBottom: "5px",
+                          }}
+                        >
+                          {msg.username}
+                        </div>
+                      )}
+
+                      <div>
+                        {msg.content}
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          opacity: 0.7,
+                          marginTop: "5px",
+                          textAlign: "right",
+                        }}
+                      >
+                        {msg.created_at
+                          ? new Date(
+                              msg.created_at
+                            ).toLocaleTimeString()
+                          : ""}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div
+                style={{
+                  color: "#aaa",
+                  fontStyle: "italic",
+                  height: "20px",
+                }}
+              >
+                {typingUser &&
+                  typingUser !== username &&
+                  `${typingUser} is typing...`}
+              </div>
 
               <div ref={messagesEndRef} />
             </div>
 
-            {/* INPUT + EMOJI AREA */}
-            <div style={{ position: "relative" }}>
+            <div
+              style={{
+                position: "relative",
+              }}
+            >
               {showEmojiPicker && (
                 <div
                   style={{
@@ -209,14 +350,26 @@ function App() {
                     zIndex: 1000,
                   }}
                 >
-                  <EmojiPicker onEmojiClick={onEmojiClick} />
+                  <EmojiPicker
+                    onEmojiClick={onEmojiClick}
+                  />
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: "10px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                }}
+              >
                 <input
                   value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
+                  onChange={(e) => {
+                    setMessageInput(
+                      e.target.value
+                    );
+                    sendTyping();
+                  }}
                   onKeyDown={handleKeyDown}
                   placeholder="Type message..."
                   style={{
@@ -229,7 +382,9 @@ function App() {
 
                 <button
                   onClick={() =>
-                    setShowEmojiPicker((prev) => !prev)
+                    setShowEmojiPicker(
+                      (prev) => !prev
+                    )
                   }
                   style={{
                     padding: "12px",

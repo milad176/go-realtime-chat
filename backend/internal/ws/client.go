@@ -9,8 +9,9 @@ import (
 )
 
 type Client struct {
-	id     string
-	roomID string
+	id       string
+	roomID   string
+	username string
 
 	conn *websocket.Conn
 	hub  *Hub
@@ -55,12 +56,23 @@ func (c *Client) ReadLoop() {
 		switch message.Type {
 
 		case "join_room":
-			c.hub.JoinRoom(c, message.RoomID)
+			c.username = message.Username
+			c.hub.JoinRoom(c, message.RoomID, message.Username)
 
-			log.Printf("client=%s joined room=%s\n", c.id, message.RoomID)
+			log.Printf("client=%s joined room=%s username=%s\n", c.id, message.RoomID, message.Username)
+
+		case "typing":
+			roomClients := c.hub.rooms[c.roomID]
+
+			for client := range roomClients {
+				if client.id == c.id {
+					continue
+				}
+
+				client.send <- payload
+			}
 
 		case "chat_message":
-
 			if c.roomID == "" {
 				log.Println("client not in room")
 				continue

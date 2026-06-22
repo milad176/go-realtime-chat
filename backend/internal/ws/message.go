@@ -5,4 +5,6 @@ type Message struct {
 	RoomID   string `json:"roomId,omitempty"`
 	Username string `json:"username,omitempty"`
 	Content  string `json:"content,omitempty"`
+
+	Users []string `json:"users,omitempty"`
 }

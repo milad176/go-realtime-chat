@@ -16,6 +16,7 @@ type Hub struct {
 
 	broadcast   chan BroadcastMessage
 	messageRepo *repository.MessageRepository
+	onlineUsers map[string]map[string]bool // room -> username -> true
 }
 
 func NewHub(messageRepo *repository.MessageRepository) *Hub {
@@ -26,6 +27,7 @@ func NewHub(messageRepo *repository.MessageRepository) *Hub {
 		broadcast:   make(chan BroadcastMessage),
 		messageRepo: messageRepo,
 		rooms:       make(map[string]map[*Client]bool),
+		onlineUsers: make(map[string]map[string]bool),
 	}
 }
 
@@ -42,7 +44,17 @@ func (h *Hub) Run() {
 		case client := <-h.unregister:
 
 			if client.roomID != "" {
+
 				delete(h.rooms[client.roomID], client)
+
+				if client.username != "" {
+					delete(
+						h.onlineUsers[client.roomID],
+						client.username,
+					)
+				}
+
+				h.sendOnlineUsers(client.roomID)
 			}
 			delete(h.clients, client)
 			close(client.send)
@@ -75,11 +87,15 @@ func (h *Hub) Run() {
 	}
 }
 
-func (h *Hub) JoinRoom(client *Client, roomID string) {
+func (h *Hub) JoinRoom(client *Client, roomID string, username string) {
 
 	// Remove from old room
 	if client.roomID != "" {
 		delete(h.rooms[client.roomID], client)
+
+		if h.onlineUsers[client.roomID] != nil {
+			delete(h.onlineUsers[client.roomID], username)
+		}
 	}
 
 	// Create room if it doesn't exist
@@ -87,9 +103,40 @@ func (h *Hub) JoinRoom(client *Client, roomID string) {
 		h.rooms[roomID] = make(map[*Client]bool)
 	}
 
+	// Create online users map for room if it doesn't exist
+	if h.onlineUsers[roomID] == nil {
+		h.onlineUsers[roomID] = make(map[string]bool)
+	}
+
 	// Add client to new room
 	h.rooms[roomID][client] = true
+	// Add user to online users list
+	h.onlineUsers[roomID][username] = true
 
 	// Update client state
 	client.roomID = roomID
+
+	// Notify clients in room about new online users
+	h.sendOnlineUsers(roomID)
+}
+
+func (h *Hub) sendOnlineUsers(roomID string) {
+	users := []string{}
+
+	for username := range h.onlineUsers[roomID] {
+		users = append(users, username)
+	}
+
+	payload, err := json.Marshal(Message{
+
+		Type:   "online_users",
+		RoomID: roomID,
+		Users:  users,
+	})
+	if err != nil {
+		return
+	}
+	for client := range h.rooms[roomID] {
+		client.send <- payload
+	}
 }
