@@ -20,6 +20,9 @@ function App() {
   const [typingUser, setTypingUser] = useState("");
 
   const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const typingTimeout = useRef(null);
+  const isTyping = useRef(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -95,18 +98,6 @@ function App() {
     setSocket(ws);
   }
 
-  function sendTyping() {
-    if (!socket) return;
-
-    socket.send(
-      JSON.stringify({
-        type: "typing",
-        roomId: room,
-        username: username,
-      })
-    );
-  }
-
   function sendMessage() {
     if (!socket) return;
 
@@ -129,6 +120,38 @@ function App() {
       sendMessage();
     }
   }
+
+function handleTyping(value) {
+    setMessageInput(value);
+
+    if (!socket) return;
+
+    if (!isTyping.current) {
+        socket.send(
+            JSON.stringify({
+                type: "typing",
+                username,
+                roomId: room,
+            })
+        );
+
+        isTyping.current = true;
+    }
+
+    clearTimeout(typingTimeout.current);
+
+    typingTimeout.current = setTimeout(() => {
+        socket.send(
+            JSON.stringify({
+                type: "stop_typing",
+                username,
+                roomId: room,
+            })
+        );
+
+        isTyping.current = false;
+    }, 2000);
+}
 
   return (
     <div
@@ -365,10 +388,7 @@ function App() {
                 <input
                   value={messageInput}
                   onChange={(e) => {
-                    setMessageInput(
-                      e.target.value
-                    );
-                    sendTyping();
+                    handleTyping(e.target.value)
                   }}
                   onKeyDown={handleKeyDown}
                   placeholder="Type message..."
